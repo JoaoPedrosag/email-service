@@ -1,6 +1,8 @@
+version: "3.8"
+
 services:
   postgresql:
-    image: "bitnami/postgresql:latest"
+    image: bitnami/postgresql:latest
     container_name: postgresql-go
     environment:
       - POSTGRESQL_USERNAME=postgres
@@ -10,6 +12,32 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/bitnami/postgresql
+    networks:
+      - email-service
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+    networks:
+      - email-service
+
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    ports:
+      - "9092:9092"
     networks:
       - email-service
 

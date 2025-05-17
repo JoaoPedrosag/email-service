@@ -5,17 +5,17 @@ import (
 	"log"
 	"os"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+
+	_ "github.com/lib/pq"
 )
 
-var DB *gorm.DB
+var DB *sqlx.DB
 
 func Init() {
-    err := godotenv.Load()
-    if err != nil {
-        log.Fatalf("Failed to load .env file: %v", err)
+    if err := godotenv.Load(); err != nil {
+        log.Fatalf("Falha ao carregar .env: %v", err)
     }
 
     dsn := fmt.Sprintf(
@@ -27,11 +27,20 @@ func Init() {
         os.Getenv("DB_PORT"),
     )
 
-    db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+    log.Printf("DSN: host=%s user=%s password=%s dbname=%s port=%s\n",
+    os.Getenv("DB_HOST"),
+    os.Getenv("DB_USER"),
+    os.Getenv("DB_PASSWORD"),
+    os.Getenv("DB_NAME"),
+    os.Getenv("DB_PORT"),
+)
+
+
+    dbConn, err := sqlx.Connect("postgres", dsn)
     if err != nil {
-        log.Fatalf("Failed to connect to the PostgreSQL database: %v", err)
+        log.Fatalf("Falha ao conectar no PostgreSQL: %v", err)
     }
 
-    DB = db
-    log.Println("Successfully connected to PostgreSQL.")
+    DB = dbConn
+    log.Println("Conectado ao PostgreSQL via sqlx.")
 }
