@@ -16,27 +16,23 @@ func CreateAuthorizedIP(c *gin.Context) {
         IP string `json:"ip" binding:"required,ip"`
     }
     if err := c.ShouldBindJSON(&input); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid or missing IP address"})
         return
     }
 
     var exists int
     if err := db.DB.Get(&exists, "SELECT 1 FROM authorized_ips WHERE ip=$1", input.IP); err == nil {
-        c.JSON(http.StatusConflict, gin.H{"error": "IP já autorizado"})
+        c.JSON(http.StatusConflict, gin.H{"message": "IP address is already authorized"})
         return
     }
 
-    res, err := db.DB.Exec(
-        `INSERT INTO authorized_ips (ip, disabled) VALUES ($1, $2)`,
+    var lastID int64
+    err := db.DB.QueryRow(
+        `INSERT INTO authorized_ips (ip, disabled) VALUES ($1, $2) RETURNING id`,
         input.IP, true,
-    )
+    ).Scan(&lastID)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao criar IP"})
-        return
-    }
-    lastID, err := res.LastInsertId()
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "não conseguiu obter ID"})
+        c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to create authorized IP"})
         return
     }
 
@@ -45,7 +41,7 @@ func CreateAuthorizedIP(c *gin.Context) {
         "SELECT id, ip, disabled, created_at, updated_at FROM authorized_ips WHERE id=$1",
         lastID,
     ); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao recuperar IP criado"})
+        c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to retrieve created IP record"})
         return
     }
 
@@ -53,26 +49,28 @@ func CreateAuthorizedIP(c *gin.Context) {
 }
 
 
+
 func ListAuthorizedIPs(c *gin.Context) {
-    var ips []model.AuthorizedIP
+    ips := []model.AuthorizedIP{}
     if err := db.DB.Select(&ips, "SELECT * FROM authorized_ips"); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao listar IPs"})
+        c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to list authorized IPs"})
         return
     }
     c.JSON(http.StatusOK, ips)
 }
 
+
 func ToggleAuthorizedIP(c *gin.Context) {
     idParam := c.Param("id")
     id, err := strconv.Atoi(idParam)
     if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+        c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid ID"})
         return
     }
 
     var ip model.AuthorizedIP
     if err := db.DB.Get(&ip, "SELECT * FROM authorized_ips WHERE id=$1", id); err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "IP não encontrado"})
+        c.JSON(http.StatusNotFound, gin.H{"error": "IP not found"})
         return
     }
 
@@ -82,7 +80,7 @@ func ToggleAuthorizedIP(c *gin.Context) {
         "UPDATE authorized_ips SET disabled=$1, updated_at=$2 WHERE id=$3",
         newStatus, now, id,
     ); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao atualizar IP"})
+        c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to update IP status"})
         return
     }
 
