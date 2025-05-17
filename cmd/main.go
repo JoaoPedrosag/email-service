@@ -37,10 +37,16 @@ func main() {
 	// Setup HTTP server
 	r := gin.Default()
 
-	r.POST("/authorized-ips", api.CreateAuthorizedIP)
-	r.GET("/authorized-ips", api.ListAuthorizedIPs)
-	r.PATCH("/authorized-ips/:id/toggle", api.ToggleAuthorizedIP)
-	r.POST("/emails", api.EnqueueEmail)
+	r.POST("/register", api.Register)
+	r.POST("/login", api.Login)
+
+	auth := r.Group("/")
+	auth.Use(api.AuthMiddleware())
+
+	auth.POST("/authorized-ips", api.CreateAuthorizedIP)
+	auth.GET("/authorized-ips", api.ListAuthorizedIPs)
+	auth.PATCH("/authorized-ips/:id/toggle", api.ToggleAuthorizedIP)
+	auth.POST("/emails", api.EnqueueEmail)
 
 	r.Run(":8080")
 }

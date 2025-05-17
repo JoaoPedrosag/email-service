@@ -18,7 +18,7 @@ func EnqueueEmail(c *gin.Context) {
 
 	start := time.Now()
 	if err := producer.Send(evt); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to enqueue email"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to enqueue email"})
 		return
 	}
 	log.Printf("Enqueue duration: %v", time.Since(start))
